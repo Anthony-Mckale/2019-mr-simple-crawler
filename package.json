@@ -1,0 +1,13 @@
+{
+  "name": "mr-simple-crawler",
+  "version": "0.0.1",
+  "description": "5 second crawler impl",
+  "homepage": "https://github.com/Anthony-Mckale/2019-mr-simple-crawler",
+  "main": "src/index.js",
+  "devDependencies": {
+    "crawler": "^1.2.0",
+    "jquery": "^3.3.1",
+    "jsdom": "^13.2.0",
+    "lodash": "^4.17.11"
+  }
+}
