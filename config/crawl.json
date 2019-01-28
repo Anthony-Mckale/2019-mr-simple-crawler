@@ -1,0 +1,10 @@
+{
+  "startingProtocal": "https://",
+  "domain": "www.bbc.co.uk",
+  "startingLocation": "/skillswise/0/",
+  "subdomainList": [
+    "/skillswise/0/",
+    "/skillswise/"
+  ],
+  "maxResults": null
+}

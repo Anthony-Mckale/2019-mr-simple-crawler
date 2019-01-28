@@ -6,6 +6,7 @@
   "main": "src/index.js",
   "devDependencies": {
     "crawler": "^1.2.0",
+    "fs": "0.0.1-security",
     "jquery": "^3.3.1",
     "jsdom": "^13.2.0",
     "lodash": "^4.17.11"

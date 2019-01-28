@@ -1,19 +1,15 @@
 let Crawler = require("crawler");
 let _ = require("lodash");
 let fs = require("fs");
+let config = require('../config/crawl.json');
 
-let startingProtocal = 'https://';
-let domain = 'www.bbc.co.uk';
-let startingLocation = '/skillswise/0/';
+let startingProtocal = config.startingProtocal;
+let domain = config.domain;
+let startingLocation = config.startingLocation;
+let subdomainList = config.subdomainList;
+let maxResults = config.maxResults;
 
 let pageDetails = {};
-
-let subdomainList = [
-    '/skillswise/0/',
-    '/skillswise/'
-];
-
-let maxResults = null;
 
 let matchesSubDomains = (url) => {
     let matching = false;
@@ -69,7 +65,7 @@ const onPageParsed = (url) => {
 };
 
 let c = new Crawler({
-    maxConnections : 10,
+    maxConnections : 1,
     /**
      * This will be called for each crawled page
      * @param error
@@ -94,13 +90,26 @@ let c = new Crawler({
             let pid = res.body.match(/"pid":"([a-zA-Z0-9]+)"/);
             pid = pid ? pid[1] : null;
 
+            let description = $('meta[name="Description"]').attr('content');
+            if (!description) {
+                description = $('meta[name="description"]').attr('content');
+            }
+            description = description ? description : null;
+
+            let bodyText = $('#main-content').text();
+            if (!bodyText) {
+                bodyText = $('#main_content').text();
+            }
+            bodyText = bodyText ? bodyText : null;
+
             pageDetails[res.options.uri] = {
                 url: res.options.uri,
                 title: $("head title").text(),
-                description: $('meta[name="Description"]').attr('content'),
+                description: description,
                 pid: pid,
                 bodyText: $('#main-content').text()
             };
+            let validPageLinks = [];
             _.each($('a'), (aTag) => {
                 let location = $(aTag).attr('href');
                 if (!location || !location.match) {
@@ -130,9 +139,11 @@ let c = new Crawler({
                 let isValid = matchesSubDomains(location);
                 if (isValid) {
                     addPage(location);
+                    validPageLinks.push(`${$(aTag).text()} => ${location}`);
                 } else {
                     notAddingPage(location);
                 }
+                pageDetails[res.options.uri].pageLinks = validPageLinks.join('\n');
             });
             onPageParsed(res.options.uri);
         }
