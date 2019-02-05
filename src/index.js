@@ -2,15 +2,19 @@ let Crawler = require("crawler");
 let _ = require("lodash");
 let fs = require("fs");
 let config = require('../config/crawl.json');
+let TurndownService = require('turndown');
+let turndownService = new TurndownService();
+turndownService.remove('script');
 
+// simple config
 let startingProtocal = config.startingProtocal;
 let domain = config.domain;
 let startingLocation = config.startingLocation;
 let subdomainList = config.subdomainList;
 let maxResults = config.maxResults;
+let isSimple = config.isSimpleCrawl;
 
 let pageDetails = {};
-
 let matchesSubDomains = (url) => {
     let matching = false;
     _.each(subdomainList, (subdomain => {
@@ -65,14 +69,14 @@ const onPageParsed = (url) => {
 };
 
 let c = new Crawler({
-    maxConnections : 1,
+    maxConnections : 20,
     /**
      * This will be called for each crawled page
      * @param error
      * @param res
      * @param done
      */
-    callback : function (error, res, done) {
+    callback : (error, res, done) => {
         if (error) {
             onPageError(res.options.uri);
         } else {
@@ -87,28 +91,106 @@ let c = new Crawler({
             //     bodyText: $('#main-content').text()
             // });
 
-            let pid = res.body.match(/"pid":"([a-zA-Z0-9]+)"/);
-            pid = pid ? pid[1] : null;
-
+            let title = $("head title").text();
             let description = $('meta[name="Description"]').attr('content');
             if (!description) {
                 description = $('meta[name="description"]').attr('content');
             }
             description = description ? description : null;
 
-            let bodyText = $('#main-content').text();
+            let bodyText = $('#main-content').html();
             if (!bodyText) {
-                bodyText = $('#main_content').text();
+                bodyText = $('#main_content').html();
             }
-            bodyText = bodyText ? bodyText : null;
+            bodyText = bodyText ? turndownService.turndown(bodyText) : null;
+            if(isSimple) {
+                bodyText = null;
+            }
+
+            // page type
+
+            // pid due to non-breaking zero width spaces inside pids no ending ---> "
+            let pid = res.body.match(/"pid":"([a-zA-Z0-9]+)/);
+            pid = pid ? pid[1] : null;
+
+            let gameSwfConfig = res.body.match(/var GameConfig = (.*)-->/);
+            if (gameSwfConfig) {
+                gameSwfConfig = gameSwfConfig[1];
+            }
+
+            let imageSrc = null;
+            let imageAlt = null;
+            let factsheet = $('div.factsheet .image_wrapper img');
+            if (factsheet.length) {
+                factsheet = $(factsheet[0]).attr('src');
+                imageSrc = factsheet;
+                imageAlt = $(factsheet[0]).attr('alt');
+                // has doc / pdf and notes
+            } else {
+                factsheet = null;
+                imageSrc = null;
+                imageAlt = null;
+            }
+
+            let worksheetConfig = res.body.match(/var worksheetConfig = (.*)-->/);
+            if (worksheetConfig) {
+                worksheetConfig = worksheetConfig[1];
+            }
+
+            let quizDoc = $('div.quiz #download_doc a');
+            let quizPdf = null;
+            if (quizDoc.length) {
+                quizDoc = $(quizDoc[0]).attr('href');
+                quizPdf = $($('div.quiz #download a')[0]).attr('href');
+            } else {
+                quizDoc = null;
+                quizPdf = null;
+            }
+
+            let isTutor = res.options.uri.match(/\/tutor\//);
+            let isAdultLearners = res.options.uri.match(/\/learners\//);
+
+            let pageType = 'unknown';
+            if (pid) {
+                pageType = 'video';
+            } else if (gameSwfConfig) {
+                pageType = 'game';
+            } else if (worksheetConfig) {
+                pageType = 'worksheet';
+            } else if (quizDoc) {
+                pageType = 'quiz';
+            } else if (isTutor) {
+                pageType = 'tutor';
+            } else if (isAdultLearners) {
+                pageType = 'adult-learners';
+            } else if (factsheet) {
+                pageType = 'factsheet';
+            }
+
+            let isTopic = res.options.uri.match(/\/topic\//);
+            if (isTopic) {
+                pageType = `topic-${pageType}`;
+            }
 
             pageDetails[res.options.uri] = {
                 url: res.options.uri,
-                title: $("head title").text(),
-                description: description,
-                pid: pid,
-                bodyText: $('#main-content').text()
+                title,
+                description,
+                pageType,
+                pid,
+                gameSwfConfig,
+                worksheetConfig,
+                quizDoc,
+                quizPdf,
+                imageSrc,
+                imageAlt,
+                bodyText
             };
+            try {
+                JSON.stringify(pageDetails[res.options.uri], null, '  ');
+            } catch (e){
+                console.log(e);
+            }
             let validPageLinks = [];
             _.each($('a'), (aTag) => {
                 let location = $(aTag).attr('href');
@@ -136,6 +218,13 @@ let c = new Crawler({
                     return;
                 }
 
+                // ignore 404 / error pages
+                let errorDiv = $('#error-404');
+                if (errorDiv.length) {
+                    notAddingPage(location);
+                    return;
+                }
+
                 let isValid = matchesSubDomains(location);
                 if (isValid) {
                     addPage(location);
@@ -143,8 +232,11 @@ let c = new Crawler({
                 } else {
                     notAddingPage(location);
                 }
-                pageDetails[res.options.uri].pageLinks = validPageLinks.join('\n');
             });
+            if (!isSimple) {
+                pageDetails[res.options.uri].pageLinks = validPageLinks.join('\n');
+            }
+
             onPageParsed(res.options.uri);
         }
         done();

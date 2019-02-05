@@ -6,5 +6,6 @@
     "/skillswise/0/",
     "/skillswise/"
   ],
-  "maxResults": null
+  "maxResults": null,
+  "isSimpleCrawl": false
 }

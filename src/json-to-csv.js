@@ -53,5 +53,4 @@ const convertJsonToCSV = (input, output) => {
 
 };
 
-convertJsonToCSV('unsorted-results.json', 'unsorted-results.csv');
 convertJsonToCSV('sorted-results.json', 'sorted-results.csv');
