@@ -1,11 +1,11 @@
 {
   "startingProtocal": "https://",
-  "domain": "www.bbc.co.uk",
-  "startingLocation": "/skillswise/0/",
+  "domain": "www.bbc.com",
+  "startingLocation": "/bitesize/",
   "subdomainList": [
-    "/skillswise/0/",
-    "/skillswise/"
+    "/bitesize/"
   ],
   "maxResults": null,
-  "isSimpleCrawl": false
+  "includeBody": false,
+  "includePageLinks": false
 }

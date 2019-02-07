@@ -10,7 +10,7 @@ const _csvEscape = (input) => {
     if (!input) {
         input = '';
     }
-    return `"${input.replace(/"/g, '""')}" `
+    return `"${(input + '').replace(/"/g, '""')}" `
 };
 
 /**

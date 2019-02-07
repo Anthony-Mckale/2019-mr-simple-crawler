@@ -3,8 +3,6 @@ let _ = require("lodash");
 let fs = require("fs");
 let config = require('../config/crawl.json');
 let TurndownService = require('turndown');
-let turndownService = new TurndownService();
-turndownService.remove('script');
 
 // simple config
 let startingProtocal = config.startingProtocal;
@@ -12,7 +10,8 @@ let domain = config.domain;
 let startingLocation = config.startingLocation;
 let subdomainList = config.subdomainList;
 let maxResults = config.maxResults;
-let isSimple = config.isSimpleCrawl;
+let includeBody = config.includeBody;
+let includePageLinks = config.includePageLinks;
 
 let pageDetails = {};
 let matchesSubDomains = (url) => {
@@ -98,13 +97,19 @@ let c = new Crawler({
             }
             description = description ? description : null;
 
-            let bodyText = $('#main-content').html();
-            if (!bodyText) {
-                bodyText = $('#main_content').html();
-            }
-            bodyText = bodyText ? turndownService.turndown(bodyText) : null;
-            if(isSimple) {
-                bodyText = null;
+
+            let bodyText = null;
+            if(includeBody) {
+                let turndownService = new TurndownService();
+                turndownService.remove('script');
+                bodyText = $('#main-content').html();
+                if (!bodyText) {
+                    bodyText = $('#main_content').html();
+                } if (!bodyText) {
+                    bodyText = $('#blq-content').html();
+                }
+
+                bodyText = bodyText ? turndownService.turndown(bodyText) : null;
             }
 
             // page type
@@ -167,6 +172,11 @@ let c = new Crawler({
                 pageType = 'factsheet';
             }
 
+            const statusCode = res.statusCode + '';
+            const htmlSize = res.body ?
+                Math.round(res.body.length / 1024) + 'kb' :
+                null;
+
             let isTopic = res.options.uri.match(/\/topic\//);
             if (isTopic) {
                 pageType = `topic-${pageType}`;
@@ -177,6 +187,8 @@ let c = new Crawler({
                 title,
                 description,
                 pageType,
+                statusCode,
+                htmlSize,
                 pid,
                 gameSwfConfig,
                 worksheetConfig,
@@ -233,7 +245,7 @@ let c = new Crawler({
                     notAddingPage(location);
                 }
             });
-            if (!isSimple) {
+            if (!includePageLinks) {
                 pageDetails[res.options.uri].pageLinks = validPageLinks.join('\n');
             }
 
