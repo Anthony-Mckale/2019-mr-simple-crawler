@@ -10,7 +10,32 @@ const _csvEscape = (input) => {
     if (!input) {
         input = '';
     }
-    return `"${(input + '').replace(/"/g, '""')}" `
+    return `"${(input + '')
+        .replace(/\t/g, '    ')
+        .replace(/\r/g, '\n')
+        .replace(/\n +\n/g, '\n\n')
+        .replace(/\n\n+/g, '\n\n')
+        .replace(/"/g, "'")}"`
+};
+
+/**
+ * @param {string} input
+ * @returns {string}
+ * @private
+ */
+const _bodyHtmlEscape = (input) => {
+    if (!input) {
+        input = '';
+    }
+    return `"${(input + '')
+        .replace(/\t/g, '    ')
+        .replace(/"/g, "'")
+        .replace(/\r/g, '\n')
+        .replace(/\n +\n/g, '\n\n')
+        .replace(/\n\n+/g, '\n\n')
+        .replace(/\n/g, '\\n')
+        .replace(/< ?script.*<\/ ?script>/g, '')}"`
+
 };
 
 /**
@@ -41,12 +66,16 @@ const convertJsonToCSV = (input, output) => {
             }
             // Do Data Row
             _.each(rawJsonRow, (value, key) => {
-                columns.push(_csvEscape(value));
+                if (key === 'bodyHtml') {
+                    columns.push(_bodyHtmlEscape(value));
+                } else {
+                    columns.push(_csvEscape(value));
+                }
             });
             const columnCSV = columns.join(',');
             rows.push(columnCSV);
         });
-        const rawCSV = rows.join('\n');
+        const rawCSV = rows.join('\r\n');
         fs.writeFileSync(output, rawCSV);
     });
 

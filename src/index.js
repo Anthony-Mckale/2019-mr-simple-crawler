@@ -79,6 +79,20 @@ let c = new Crawler({
         if (error) {
             onPageError(res.options.uri);
         } else {
+            // https://github.com/cheeriojs/cheerio/issues/856
+            // https://github.com/cheeriojs/cheerio/issues/830
+            // --expose-gc --optimize_for_size --max_old_space_size=40960 --gc_interval=100
+            /**
+             * Cheerio so.... slicing it's not good at text apparently it memory leaks
+             * @param s
+             * @returns {string}
+             */
+            let unleak = (s) => {
+                if (!s) {
+                   return '';
+                }
+                return (' ' + s).substr(1);
+            };
             let $ = res.$;
 
             // console.log(res.body);
@@ -97,25 +111,18 @@ let c = new Crawler({
             }
             description = description ? description : null;
 
-
-            let bodyText = null;
-            if(includeBody) {
-                let turndownService = new TurndownService();
-                turndownService.remove('script');
-                bodyText = $('#main-content').html();
-                if (!bodyText) {
-                    bodyText = $('#main_content').html();
-                } if (!bodyText) {
-                    bodyText = $('#blq-content').html();
-                }
-
-                bodyText = bodyText ? turndownService.turndown(bodyText) : null;
-            }
-
             // page type
 
             // pid due to non-breaking zero width spaces inside pids no ending ---> "
             let pid = res.body.match(/"pid":"([a-zA-Z0-9]+)/);
+            if (!pid) {
+                pid = res.body.match(/<param name="externalIdentifier" value="([a-zA-Z0-9]+)" \/>/);
+            }
+
+            if (pid) {
+                $(".emp, #emp1").html(`<div>VIDEO WITH PID ${pid}</div>`);
+            }
+
             pid = pid ? pid[1] : null;
 
             let gameSwfConfig = res.body.match(/var GameConfig = (.*)-->/);
@@ -182,21 +189,45 @@ let c = new Crawler({
                 pageType = `topic-${pageType}`;
             }
 
+
+
+            // kill a bunch of unused content
+            // share tools
+            $("#page-bookmark-links-foot").remove();
+            $('.bbc-st').remove();
+
+            let bodyText = null;
+            let bodyHtml = null;
+            if(includeBody) {
+                let turndownService = new TurndownService();
+                turndownService.remove('script');
+                bodyText = $('#main-content').html();
+                if (!bodyText) {
+                    bodyText = $('#main_content').html();
+                } if (!bodyText) {
+                    bodyText = $('#blq-content').html();
+                }
+
+                bodyText = bodyText ? turndownService.turndown(bodyText) : null;
+                bodyHtml = res.body;
+            }
+
             pageDetails[res.options.uri] = {
                 url: res.options.uri,
-                title,
-                description,
-                pageType,
-                statusCode,
-                htmlSize,
-                pid,
-                gameSwfConfig,
-                worksheetConfig,
-                quizDoc,
-                quizPdf,
-                imageSrc,
-                imageAlt,
-                bodyText
+                title: unleak(title),
+                description: unleak(description),
+                pageType: unleak(pageType),
+                statusCode: unleak(statusCode),
+                htmlSize: unleak(htmlSize),
+                pid: unleak(pid),
+                gameSwfConfig: unleak(gameSwfConfig),
+                worksheetConfig: unleak(worksheetConfig),
+                quizDoc: unleak(quizDoc),
+                quizPdf: unleak(quizPdf),
+                imageSrc: unleak(imageSrc),
+                imageAlt: unleak(imageAlt),
+                bodyText: unleak(bodyText),
+                bodyHtml: unleak(bodyHtml)
             };
             try {
                 JSON.stringify(pageDetails[res.options.uri], null, '  ');
@@ -205,7 +236,7 @@ let c = new Crawler({
             }
             let validPageLinks = [];
             _.each($('a'), (aTag) => {
-                let location = $(aTag).attr('href');
+                let location = unleak($(aTag).attr('href'));
                 if (!location || !location.match) {
                    // console.log('ERROR: weird a tag skipped', $().append(aTag).html());
                    return;
@@ -240,7 +271,9 @@ let c = new Crawler({
                 let isValid = matchesSubDomains(location);
                 if (isValid) {
                     addPage(location);
-                    validPageLinks.push(`${$(aTag).text()} => ${location}`);
+                    if (!includePageLinks) {
+                        validPageLinks.push(`${unleak($(aTag).text())} => ${location}`);
+                    }
                 } else {
                     notAddingPage(location);
                 }
