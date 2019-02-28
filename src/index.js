@@ -1,8 +1,9 @@
-let Crawler = require("crawler");
-let _ = require("lodash");
-let fs = require("fs");
-let config = require('../config/crawl.json');
-let TurndownService = require('turndown');
+const Crawler = require("crawler");
+const _ = require("lodash");
+const fs = require("fs");
+const config = require('../config/crawl.json');
+const TurndownService = require('turndown');
+const pretty = require('pretty');
 
 // simple config
 let startingProtocal = config.startingProtocal;
@@ -12,6 +13,7 @@ let subdomainList = config.subdomainList;
 let maxResults = config.maxResults;
 let includeBody = config.includeBody;
 let includePageLinks = config.includePageLinks;
+let includePageAssets = config.includePageAssets;
 
 let pageDetails = {};
 let matchesSubDomains = (url) => {
@@ -209,7 +211,7 @@ let c = new Crawler({
                 }
 
                 bodyText = bodyText ? turndownService.turndown(bodyText) : null;
-                bodyHtml = res.body;
+                bodyHtml = pretty($('body').parent().html(), {ocd: true});
             }
 
             pageDetails[res.options.uri] = {
@@ -229,6 +231,11 @@ let c = new Crawler({
                 bodyText: unleak(bodyText),
                 bodyHtml: unleak(bodyHtml)
             };
+            if (includePageAssets) {
+                let assets = pageDetails[res.options.uri].bodyHtml.match(/http(s?):\/\/((downloads\.bbc\.co\.uk)|(news\.bbcimg\.co\.uk))\/[^.")}>]+\.[a-zA-Z0-9]{3,6}/g);
+                pageDetails[res.options.uri].assets = assets;
+            }
+
             try {
                 JSON.stringify(pageDetails[res.options.uri], null, '  ');
             } catch (e){

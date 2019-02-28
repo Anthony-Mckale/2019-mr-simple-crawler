@@ -12,10 +12,12 @@ const _csvEscape = (input) => {
     }
     return `"${(input + '')
         .replace(/\t/g, '    ')
-        .replace(/\r/g, '\n')
-        .replace(/\n +\n/g, '\n\n')
-        .replace(/\n\n+/g, '\n\n')
-        .replace(/"/g, "'")}"`
+        .replace(/\r?\n/g, '\r')
+        .replace(/\r[ ]+/g, '\r')
+        .replace(/[ ]+\r/g, '\r')
+        .replace(/\r\r+/g, '\r\n')
+        .replace(/,/g, '&#44;')
+        .replace(/"/g, '&#34;')}"`
 };
 
 /**
@@ -28,13 +30,17 @@ const _bodyHtmlEscape = (input) => {
         input = '';
     }
     return `"${(input + '')
-        .replace(/\t/g, '    ')
-        .replace(/"/g, "'")
-        .replace(/\r/g, '\n')
-        .replace(/\n +\n/g, '\n\n')
-        .replace(/\n\n+/g, '\n\n')
-        .replace(/\n/g, '\\n')
-        .replace(/< ?script.*<\/ ?script>/g, '')}"`
+        .replace(/\t/gm, '    ')
+        .replace(/,/gm, '&#44;')
+        .replace(/"/gm, '&#34;')
+        .replace(/\r?\n/g, '\r')
+        .replace(/\r([ ]+)/g, '\r')
+        .replace(/([ ]+)\r/g, '\r')
+        .replace(/\r+/gm, '\r')
+        .replace(/\r/gm, '___')
+        .replace(/___/gm, '\r\n')
+        .replace(/\r\n([ ]+)/g, '\r\n')
+        .replace(/([ ]+)\r\n/g, '\r\n')}"`
 
 };
 
@@ -57,6 +63,9 @@ const convertJsonToCSV = (input, output) => {
             let columns = [];
             if(isFirst) {
                 _.each(rawJsonRow, (value, key) => {
+                    if (key === 'bodyHtml') {
+                        return;
+                    }
                     columns.push(_csvEscape(key));
                 });
                 const columnCSV = columns.join(',');
@@ -66,8 +75,17 @@ const convertJsonToCSV = (input, output) => {
             }
             // Do Data Row
             _.each(rawJsonRow, (value, key) => {
+                if (key === 'assets') {
+                    value = value ? value.join('\n') : '';
+                }
                 if (key === 'bodyHtml') {
-                    columns.push(_bodyHtmlEscape(value));
+                    let matches = rawJsonRow.url.match(/^https?:\/\/[^\/]+\/(.*)\/([^\/]*)$/);
+                    let path = `html/${(matches && matches[1]) || ''}`;
+                    let file = (matches && matches[2] !== '' ) ?
+                        `${((matches && matches[2]) || rawJsonRow.url.replace(/[\/.:?=]/g, '_'))}.html` :
+                        'index.html';
+                    fs.mkdirSync(path , {recursive: true});
+                    fs.writeFileSync(`${path}/${file}`, value)
                 } else {
                     columns.push(_csvEscape(value));
                 }

@@ -6,6 +6,7 @@
     "/bitesize/"
   ],
   "maxResults": null,
-  "includeBody": false,
-  "includePageLinks": false
+  "includeBody": true,
+  "includePageLinks": true,
+  "includePageAssets": true
 }
