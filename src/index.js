@@ -25,7 +25,6 @@ let matchesSubDomains = (url) => {
         }
         const regex = `^((https?:)?\/?\/${domain.replace(/\//, '\\/')})?${subdomain.replace(/\//, '\\/')}`;
         matching = !!url.match(new RegExp(regex));
-        // console.log(regex, url, matching);
     }));
     return matching;
 };
@@ -232,7 +231,16 @@ let c = new Crawler({
                 bodyHtml: unleak(bodyHtml)
             };
             if (includePageAssets) {
-                let assets = pageDetails[res.options.uri].bodyHtml.match(/http(s?):\/\/((downloads\.bbc\.co\.uk)|(news\.bbcimg\.co\.uk))\/[^.")}>]+\.[a-zA-Z0-9]{3,6}/g);
+                let assets = pageDetails[res.options.uri].bodyHtml.match(/((src=")|((http(s?):)?\/\/(([a-zA-Z0-9.]+\.bbci?\.co\.uk)|([a-zA-Z0-9.]+\.bbcimg\.co\.uk))))\/[a-zA-Z0-9][^.")}>]+\.[a-zA-Z0-9]{3,6}/g);
+                // ignore weird html pages which are referenced as downloads
+                assets = assets.filter((asset) => {
+                    return !asset.match(/\.(html)|(shtml)$/);
+                });
+                assets = assets.map((asset) => {
+                    return asset
+                        .replace(/^src="/, `${startingProtocal}${domain}`)
+                        .replace(/^\/\//, `${startingProtocal}`);
+                });
                 pageDetails[res.options.uri].assets = assets;
             }
 

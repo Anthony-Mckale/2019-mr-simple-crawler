@@ -1,9 +1,16 @@
 {
   "startingProtocal": "https://",
-  "domain": "www.bbc.com",
-  "startingLocation": "/bitesize/",
+  "domain": "www.bbc.co.uk",
+  "startingLocation": "/sport/football/supermovers",
   "subdomainList": [
-    "/bitesize/"
+    "/sport/football/supermovers",
+    "/sport/supermovers",
+    "/sport/av/supermovers"
+  ],
+  "_startingLocation": "/archive/",
+  "_subdomainList": [
+    "/archive/0/",
+    "/archive/"
   ],
   "maxResults": null,
   "includeBody": true,

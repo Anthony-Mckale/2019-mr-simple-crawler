@@ -28,6 +28,7 @@ const downloadAssets = (input, output) => {
                 callback();
                 return;
             }
+            downloadFile = downloadFile.replace(/^https/, 'http');
             let matches = downloadFile.match(/^https?:\/\/[^\/]+\/(.*)\/([^\/]*)$/);
             let path = `assets/${(matches && matches[1]) || ''}`;
             let file = (matches && matches[2] !== '' ) ?
